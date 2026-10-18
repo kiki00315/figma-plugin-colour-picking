@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  body { font: 12px/1.6 system-ui, sans-serif; margin: 16px; color: var(--figma-color-text); }
+  h1 { font-size: 13px; margin: 0 0 4px; }
+  p { margin: 0 0 8px; color: var(--figma-color-text-secondary); }
+  textarea {
+    width: 100%; box-sizing: border-box; height: 72px; padding: 8px; font: 12px ui-monospace, monospace;
+    border: 1px solid var(--figma-color-border); border-radius: 4px;
+    background: var(--figma-color-bg); color: var(--figma-color-text);
+  }
+  #swatches { display: flex; height: 40px; margin: 12px 0; border-radius: 4px; overflow: hidden; border: 1px solid var(--figma-color-border); }
+  #swatches i { flex: 1; }
+  #status { min-height: 1.6em; color: var(--figma-color-text-secondary); }
+  button {
+    width: 100%; padding: 8px; border: 0; border-radius: 6px; cursor: pointer;
+    background: var(--figma-color-bg-brand); color: var(--figma-color-text-onbrand); font: inherit; font-weight: 600;
+  }
+  button:disabled { opacity: .4; cursor: default; }
+</style>
+
+<h1>色見本ジェネレーターの配色で置き換え</h1>
+<p>ジェネレーターで「色をコピー」を押し、ここに貼り付けます。</p>
+<textarea id="input" placeholder="#0B3954,#087E8B,#BFD7EA,#FF5A5F,#C81D25" aria-label="貼り付けた色"></textarea>
+<div id="swatches" aria-hidden="true"></div>
+<div id="status" role="status"></div>
+<button id="go" type="button" disabled>選んだレイヤーの色を置き換える</button>
+
+<script>
+  const input = document.getElementById('input');
+  const swatches = document.getElementById('swatches');
+  const status = document.getElementById('status');
+  const go = document.getElementById('go');
+  let hexes = [];
+
+  // 貼り付けた文字から、#RRGGBB を取り出す（区切りはカンマでも空白でも改行でもよい）。# なしの 6 桁も受け付ける
+  function parse(text) {
+    const found = text.match(/#?[0-9A-Fa-f]{6}(?![0-9A-Fa-f])/g) || [];
+    return [...new Set(found.map((h) => '#' + h.replace('#', '').toUpperCase()))];
+  }
+
+  input.addEventListener('input', () => {
+    hexes = parse(input.value);
+    // 色は style 属性で入れる（HEX は上の parse で形を確かめ済み）
+    swatches.innerHTML = hexes.map((h) => `<i style="background:${h}"></i>`).join('');
+    go.disabled = hexes.length < 2;
+    status.textContent = hexes.length === 0 ? '' : hexes.length < 2 ? '2 色以上が必要です' : `${hexes.length} 色を読み取りました`;
+  });
+
+  go.addEventListener('click', () => {
+    parent.postMessage({ pluginMessage: { type: 'replace', hexes } }, '*');
+  });
+</script>
