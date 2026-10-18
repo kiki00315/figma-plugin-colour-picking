@@ -34,8 +34,9 @@
   let hexes = [];
 
   // 貼り付けた文字から、#RRGGBB を取り出す（区切りはカンマでも空白でも改行でもよい）。# なしの 6 桁も受け付ける
+  // 前後に 16 進数の文字が続くものは取り出さない（7 桁以上の数字の一部を、色と読みまちがえないため）
   function parse(text) {
-    const found = text.match(/#?[0-9A-Fa-f]{6}(?![0-9A-Fa-f])/g) || [];
+    const found = text.match(/(?<![0-9A-Fa-f])#?[0-9A-Fa-f]{6}(?![0-9A-Fa-f])/g) || [];
     return [...new Set(found.map((h) => '#' + h.replace('#', '').toUpperCase()))];
   }
 
