@@ -60,13 +60,18 @@ function buildMapping(used: RGB[], palette: RGB[]): Map<string, RGB> {
   return map;
 }
 
-function repaint(paints: readonly Paint[], map: Map<string, RGB>): Paint[] {
+// 塗り（または線）の色を、対応表にそって書き換える。書き換える色が 1 つもなければ null を返す
+function repaint(paints: readonly Paint[], map: Map<string, RGB>): Paint[] | null {
+  let hit = false;
   // 不透明度（opacity）はそのまま残して、色だけ変える
-  return paints.map((p) => {
+  const next = paints.map((p) => {
     if (p.type !== "SOLID") return p;
-    const next = map.get(rgbToHex(p.color));
-    return next ? { ...p, color: next } : p;
+    const color = map.get(rgbToHex(p.color));
+    if (!color) return p;
+    hit = true;
+    return { ...p, color };
   });
+  return hit ? next : null;
 }
 
 function replaceColors(hexes: string[]) {
@@ -101,9 +106,12 @@ function replaceColors(hexes: string[]) {
   let changed = 0;
   walk(selection, (node) => {
     if (!hasPaints(node)) return;
-    if (node.fills !== figma.mixed) node.fills = repaint(node.fills, map);
-    if (node.strokes.length > 0) node.strokes = repaint(node.strokes, map);
-    changed++;
+    const fills = node.fills === figma.mixed ? null : repaint(node.fills, map);
+    const strokes = node.strokes.length > 0 ? repaint(node.strokes, map) : null;
+    if (fills) node.fills = fills;
+    if (strokes) node.strokes = strokes;
+    // 色を書き換えたレイヤーだけを数える（グラデーションや画像だけのレイヤーは数えない）
+    if (fills || strokes) changed++;
   });
   figma.notify(`${seen.size} 色を、パレットの色に置き換えました（${changed} 個のレイヤー）`);
 }
